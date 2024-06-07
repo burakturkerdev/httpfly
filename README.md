@@ -1,2 +1,2 @@
 # httpfly
-HttpFly is a basic web-app framework
+Httpfly is a lightweight web framework built on top of Go's net/http package. It offers support for custom middleware functions, routing, synchronous and asynchronous request handling, as well as basic runtime optimizations. Designed with simplicity and minimalism in mind, Httpfly provides essential features for building web applications without unnecessary complexity. Developed primarily for personal projects, it offers a streamlined approach to web development while remaining flexible and easy to use.
