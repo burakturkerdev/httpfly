@@ -98,7 +98,7 @@ func SetOptimizationThreshold(threshold int64) {
 
 var (
 	totalRequestMutex sync.Mutex
-	averageResMsMutex sync.Mutex
+	avarageResMsMutex sync.Mutex
 )
 
 func handle(resw http.ResponseWriter, req *http.Request) {
