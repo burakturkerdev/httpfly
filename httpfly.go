@@ -3,8 +3,6 @@ package httpfly
 import (
 	"errors"
 	"net/http"
-	"sync"
-	"time"
 )
 
 // RoutePrefix is the prefix for all routes.
@@ -20,16 +18,6 @@ func AddMiddleware(f MiddlewareFunc) {
 	middlewares = append(middlewares, f)
 }
 
-// HandlingMode represents the mode for request handling.
-type HandlingMode bool
-
-const (
-	// Sync mode indicates synchronous request handling.
-	Sync HandlingMode = false
-	// Async mode indicates asynchronous request handling.
-	Async HandlingMode = true
-)
-
 // AuthRequire defines whether authentication is required for a route.
 type AuthRequire bool
 
@@ -42,7 +30,6 @@ const (
 
 // RouteInfo defines information about a route.
 type RouteInfo struct {
-	Mode         HandlingMode
 	Endpoint     string
 	Method       RequestMethod
 	AuthRequired bool
@@ -53,23 +40,23 @@ type RouteInfo struct {
 var routes []*RouteInfo
 
 // MapGet maps a GET route.
-func MapGet(mode HandlingMode, path string, auth AuthRequire, f func(r *RequestBody)) {
-	routes = append(routes, &RouteInfo{mode, RoutePrefix + path, get, bool(auth), f})
+func MapGet(path string, auth AuthRequire, f func(r *RequestBody)) {
+	routes = append(routes, &RouteInfo{RoutePrefix + path, get, bool(auth), f})
 }
 
 // MapPost maps a POST route.
-func MapPost(mode HandlingMode, path string, auth AuthRequire, f func(r *RequestBody)) {
-	routes = append(routes, &RouteInfo{mode, RoutePrefix + path, post, bool(auth), f})
+func MapPost(path string, auth AuthRequire, f func(r *RequestBody)) {
+	routes = append(routes, &RouteInfo{RoutePrefix + path, post, bool(auth), f})
 }
 
 // MapPut maps a PUT route.
-func MapPut(mode HandlingMode, path string, auth AuthRequire, f func(r *RequestBody)) {
-	routes = append(routes, &RouteInfo{mode, RoutePrefix + path, put, bool(auth), f})
+func MapPut(path string, auth AuthRequire, f func(r *RequestBody)) {
+	routes = append(routes, &RouteInfo{RoutePrefix + path, put, bool(auth), f})
 }
 
 // MapDelete maps a DELETE route.
-func MapDelete(mode HandlingMode, path string, auth AuthRequire, f func(r *RequestBody)) {
-	routes = append(routes, &RouteInfo{mode, RoutePrefix + path, delete, bool(auth), f})
+func MapDelete(path string, auth AuthRequire, f func(r *RequestBody)) {
+	routes = append(routes, &RouteInfo{RoutePrefix + path, delete, bool(auth), f})
 }
 
 // StartHTTPServer starts the HTTP server.
@@ -83,23 +70,6 @@ func StartHTTPServerTLS(listen string, certFile string, keyFile string) {
 	http.HandleFunc("/", handle)
 	http.ListenAndServeTLS(listen, certFile, keyFile, nil)
 }
-
-// Variables for response time optimizations
-var avarageResMs int64 = 0
-var totalRequest int64 = 0
-var resetAt int64 = 9223372036054775807
-var startOptimizeAt int64 = 1000
-
-// It performs runtime optimizations as needed when the handled request count exceeds a specified threshold. Be mindful of setting this value appropriately: if set too low, it may lead to unnecessary operations, while setting it too high may delay optimization efforts
-
-func SetOptimizationThreshold(threshold int64) {
-	startOptimizeAt = threshold
-}
-
-var (
-	totalRequestMutex sync.Mutex
-	averageResMsMutex sync.Mutex
-)
 
 func handle(resw http.ResponseWriter, req *http.Request) {
 	for _, v := range routes {
@@ -127,35 +97,7 @@ func handle(resw http.ResponseWriter, req *http.Request) {
 				m(rqbody, resw, req)
 			}
 
-			t := time.Now()
-
-			if v.Mode == Async {
-				go v.HandlerF(rqbody)
-			} else {
-				v.HandlerF(rqbody)
-			}
-
-			totalRequestMutex.Lock()
-			averageResMsMutex.Lock()
-
-			// Start to runtime optimizations
-			elapsed := time.Since(t).Microseconds()
-
-			if totalRequest == resetAt || avarageResMs == resetAt {
-				totalRequest = 0
-				avarageResMs = 0
-			}
-
-			if totalRequest > startOptimizeAt && elapsed > avarageResMs && v.Mode != Async {
-				// If sync request takes more time than avarage make it async.
-				v.Mode = Async
-			}
-
-			totalRequest++
-			avarageResMs += elapsed / totalRequest
-
-			averageResMsMutex.Unlock()
-			totalRequestMutex.Unlock()
+			v.HandlerF(rqbody)
 			return
 		}
 	}
