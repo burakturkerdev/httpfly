@@ -161,6 +161,7 @@ type RequestBody struct {
 	JsonData []byte
 	Params   Parameters
 	Claims   map[string]string
+	responseW http.ResponseWriter
 }
 
 // Handler defines the type for request handlers.
