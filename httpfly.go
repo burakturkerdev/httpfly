@@ -97,6 +97,8 @@ func handle(resw http.ResponseWriter, req *http.Request) {
 				m(rqbody, resw, req)
 			}
 
+			rqbody.ResponseW = resw
+
 			v.HandlerF(rqbody)
 			return
 		}
@@ -158,9 +160,9 @@ type Parameters map[string][]byte
 
 // RequestBody represents the request body.
 type RequestBody struct {
-	JsonData []byte
-	Params   Parameters
-	Claims   map[string]string
+	JsonData  []byte
+	Params    Parameters
+	Claims    map[string]string
 	ResponseW http.ResponseWriter
 }
 
